@@ -8,7 +8,6 @@ import org.spongepowered.api.event.cause.Cause;
 import org.spongepowered.api.text.channel.MessageChannel;
 import org.spongepowered.api.text.Text;
 
-import java.util.ArrayList;
 import java.util.Optional;
 
 import org.spongepowered.api.text.format.TextColors;
@@ -23,10 +22,19 @@ import java.io.*;
         description = "Looks up a client IP when joining the server"
 )
 public class IPLookup {
-    private Aliases aliases;
+    private Aliases IPAliases;
+    private Aliases UUIDAliases;
+    private Config config;
 
     public IPLookup() {
-        this.aliases = new Aliases();
+        this.config = new Config();
+        this.IPAliases = new Aliases();
+        this.UUIDAliases = new Aliases();
+    }
+
+    public void sendMessage(Text message, Player player) {
+        MessageChannel.permission("Staff").send(message);
+        player.getMessageChannel().send(message);
     }
 
     @Listener
@@ -66,11 +74,11 @@ public class IPLookup {
 
             // TODO : Change colours when config files are in
             output = Text.of(
-                TextColors.GOLD,
+                this.config.getPlayerColour(),
                 player.getName(),
                 TextColors.WHITE,
                 " is connecting from ",
-                TextColors.AQUA,
+                this.config.getLocationColour(),
                 city.getTextContent().trim(),
                 ", ",
                 regionName.getTextContent().trim(),
@@ -82,30 +90,51 @@ public class IPLookup {
 
             output = Text.of(
                 "Error getting location of ",
-                TextColors.GOLD,
+                this.config.getPlayerColour(),
                 player.getName()
             );
         }
 
         // TODO : Change this when config files are in
-        MessageChannel.permission("Staff").send(output);
+        this.sendMessage(output, player);
 
-        // Alias time!
-        this.aliases.addAlias(ip, player.getName());
-        ArrayList<String> aliasList = this.aliases.getAliases(ip);
-        if (aliasList.size() > 1) {
-            String outputAliases = "";
+        // Aliases Time!
+        this.checkAliases(
+            this.IPAliases,
+            ip,
+            player,
+            "Also connected from this IP: "
+        );
 
-            for (String s : aliasList) {
-                if (outputAliases.length() > 0) {
-                    outputAliases = outputAliases.concat(", ");
-                }
-                outputAliases = outputAliases.concat(s);
-            }
+        this.checkAliases(
+            this.UUIDAliases,
+            player.getUniqueId().toString(),
+            player,
+            "Previously known as: "
+        );
+    }
 
-            MessageChannel.permission("Staff").send(
-                    Text.of(TextColors.BLUE, "Aliases: ", TextColors.RED, outputAliases)
+    public void checkAliases(Aliases alias, String key, Player player, String title) {
+        alias.addAlias(key, player.getName());
+
+        if (alias.size(key) > 1) {
+            this.sendAliasMessage(
+                alias.getAliasString(key),
+                player,
+                title
             );
         }
+    }
+
+    public void sendAliasMessage(String list, Player player, String title) {
+        this.sendMessage(
+            Text.of(
+                this.config.getAliasTitleColour(),
+                title,
+                this.config.getAliasColour(),
+                list
+            ),
+            player
+        );
     }
 }
