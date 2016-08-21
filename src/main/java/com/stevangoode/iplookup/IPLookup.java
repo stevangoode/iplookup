@@ -8,6 +8,7 @@ import org.spongepowered.api.event.cause.Cause;
 import org.spongepowered.api.text.channel.MessageChannel;
 import org.spongepowered.api.text.Text;
 
+import java.util.ArrayList;
 import java.util.Optional;
 
 import org.spongepowered.api.text.format.TextColors;
@@ -22,6 +23,12 @@ import java.io.*;
         description = "Looks up a client IP when joining the server"
 )
 public class IPLookup {
+    private Aliases aliases;
+
+    public IPLookup() {
+        this.aliases = new Aliases();
+    }
+
     @Listener
     public void onClientConnection(ClientConnectionEvent.Join event) {
         Cause cause = event.getCause();
@@ -81,9 +88,24 @@ public class IPLookup {
         }
 
         // TODO : Change this when config files are in
-        MessageChannel.combined(
-            MessageChannel.permission("Staff"),
-            player.getMessageChannel()
-        ).send(output);
+        MessageChannel.permission("Staff").send(output);
+
+        // Alias time!
+        this.aliases.addAlias(ip, player.getName());
+        ArrayList<String> aliasList = this.aliases.getAliases(ip);
+        if (aliasList.size() > 1) {
+            String outputAliases = "";
+
+            for (String s : aliasList) {
+                if (outputAliases.length() > 0) {
+                    outputAliases = outputAliases.concat(", ");
+                }
+                outputAliases = outputAliases.concat(s);
+            }
+
+            MessageChannel.permission("Staff").send(
+                    Text.of(TextColors.BLUE, "Aliases: ", TextColors.RED, outputAliases)
+            );
+        }
     }
 }
